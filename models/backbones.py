@@ -118,6 +118,11 @@ class ResNetBackbone(nn.Module):
         large = self.layer4(medium)
         return small, medium, large
 
+def resnet18():
+    print('Using backbone ResNet-18. Loading ImageNet weights...')
+    model = torchvision.models.resnet18(pretrained=True)
+    return ResNetBackbone(model)
+
 def resnet34():
     print('Using backbone ResNet-34. Loading ImageNet weights...')
     model = torchvision.models.resnet34(pretrained=True)

@@ -295,7 +295,7 @@ def iou_mask(boxes1, boxes2, xywha, mask_size=64, is_degree=True):
 
 
 from pycocotools import mask as maskUtils
-def iou_rle(boxes1, boxes2, xywha, is_degree=True, **kwargs):
+def iou_rle(boxes1, boxes2, xywha, is_degree=True, img_size=(), normalized=True):
     r'''
     use mask method to calculate IOU between boxes1 and boxes2
 
@@ -325,9 +325,12 @@ def iou_rle(boxes1, boxes2, xywha, is_degree=True, **kwargs):
         boxes2 = boxes2.unsqueeze(0)
     assert boxes1.shape[1] == boxes2.shape[1] == 5
     
-    size = kwargs.get('img_size', 2048)
-    h,w = size if isinstance(size, tuple) else size,size
-    if 'normalized' in kwargs and kwargs['normalized'] == True:
+    if isinstance(img_size, tuple):
+        h,w = img_size
+    else: 
+        h, w = img_size, img_size
+
+    if normalized:
         # the [x,y,w,h] are between 0~1
         # assert (boxes1[:,:4] <= 1).all() and (boxes2[:,:4] <= 1).all()
         boxes1[:,0] *= w

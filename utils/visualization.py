@@ -38,7 +38,7 @@ def draw_dt_on_np(im, detections, print_dt=False, color=(255,0,0),
         x1, y1 = x - w/2, y - h/2
         if print_dt:
             print(f'[{x} {y} {w} {h} {a}], confidence: {conf}')
-        draw_xywha(im, x, y, w, h, a, color=color, linewidth=line_width)
+        im = draw_xywha(im, x, y, w, h, a, color=color, linewidth=line_width)
         if kwargs.get('show_conf', True):
             cv2.putText(im, f'{conf:.2f}', (int(x1),int(y1)), font, 1*text_size,
                         (255,255,255), font_bold, cv2.LINE_AA)
@@ -55,6 +55,8 @@ def draw_dt_on_np(im, detections, print_dt=False, color=(255,0,0),
                     (im.shape[1] - caption_w + im.shape[0]//100, end[1]-im.shape[1]//200),
                     font, 1.2*text_size,
                     (255,255,255), font_bold*2, cv2.LINE_AA)
+
+    return im
 
 
 def draw_anns_on_np(im, annotations, draw_angle=False, color=(0,0,255), line_width=None):

@@ -29,6 +29,7 @@ class Dataset4YoloAngle(torch.utils.data.Dataset):
             only_person: bool, if true, non-person BBs are discarded. default: True
             debug: bool, if True, only one data id is selected from the dataset
         """
+        self.affine_trans = augUtils.AffineTransform()
         self.max_labels = 50
         self.img_size = img_size
         self.enable_aug = augmentation
@@ -170,11 +171,19 @@ class Dataset4YoloAngle(torch.utils.data.Dataset):
 
         # augmentation
         if self.enable_aug:
+            # img, labels[:gt_num] = self.affine_trans(img, labels[:gt_num])
             img, labels[:gt_num] = self.augment_PIL(img, labels[:gt_num])
+            # print(f"aug pil {img.size}")
 
         # pad to square
         img, labels[:gt_num], pad_info = rect_to_square(img, labels[:gt_num],
                             self.img_size, pad_value=0, aug=self.enable_aug)
+        
+        # affine transform
+        img, labels[:gt_num] = self.affine_trans(img, labels[:gt_num], img.size[0], debug=False)
+
+        # print(f"square {img.size}")
+
         # pad_info = torch.Tensor((ori_w, ori_h) + imtl + imwh)
 
         img = tvf.to_tensor(img)
@@ -190,6 +199,8 @@ class Dataset4YoloAngle(torch.utils.data.Dataset):
                 img = augUtils.add_saltpepper(img, max_p=0.04)
 
         labels[:gt_num] = normalize_bbox(labels[:gt_num], self.img_size, self.img_size)
+
+        # print(labels[:gt_num])
 
         # x,y,w,h: 0~1, angle: -90~90 degrees
         assert img.dim() == 3 and img.shape[0] == 3 and img.shape[1] == img.shape[2]

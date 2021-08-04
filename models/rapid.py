@@ -34,6 +34,8 @@ class RAPiD(nn.Module):
             else:
                 print('Warning: no ImageNet-pretrained weights found.',
                       'Please check https://github.com/duanzhiihao/RAPiD for it.')
+        elif backbone == 'res18':
+            self.backbone = models.backbones.resnet18()
         elif backbone == 'res34':
             self.backbone = models.backbones.resnet34()
         elif backbone == 'res50':
@@ -47,6 +49,8 @@ class RAPiD(nn.Module):
 
         if backbone == 'dark53':
             chS, chM, chL = 256, 512, 1024
+        elif backbone in {'res18'}:
+            chS, chM, chL = 128, 256, 512
         elif backbone in {'res34'}:
             chS, chM, chL = 128, 256, 512
         elif backbone in {'res50','res101'}:
@@ -65,6 +69,8 @@ class RAPiD(nn.Module):
         labels: a batch of ground truth
         '''
         assert x.dim() == 4
+
+        device = x.device
         self.img_size = x.shape[2:4]
 
         # go through backbone
@@ -113,6 +119,7 @@ class PredLayer(nn.Module):
         self.ignore_thre = 0.6
 
         # self.loss4obj = FocalBCE(reduction='sum')
+        # self.loss4obj = FocalLoss(nn.BCELoss(reduction='sum'))
         self.loss4obj = nn.BCELoss(reduction='sum')
         self.l2_loss = nn.MSELoss(reduction='sum')
         self.bce_loss = nn.BCELoss(reduction='sum')
@@ -218,9 +225,12 @@ class PredLayer(nn.Module):
         ti_all = tx_all.long()
         tj_all = ty_all.long()
 
-        norm_anch_wh = anchors[:,0:2] / img_hw # normalized
+        # norm_anch_wh = anchors[:,0:2] / img_hw # normalized
+        norm_anch_wh = anchors[:,0:2] / torch.tensor(img_hw).to(device=device) # normalized
         norm_anch_00wha = self.anch_00wha_all.clone().to(device=device)
-        norm_anch_00wha[:,2:4] /= img_hw # normalized
+        # norm_anch_00wha[:,2:4] /= img_hw # normalized
+        norm_anch_00wha[:,2] /= img_hw[0]
+        norm_anch_00wha[:,3] /= img_hw[1]
 
         # traverse all images in a batch
         valid_gt_num = 0
@@ -268,7 +278,7 @@ class PredLayer(nn.Module):
                 # pred_ious = iou_mask(selected.view(-1,5), gt_boxes, xywha=True,
                 #                     mask_size=32, is_degree=True)
                 pred_ious = iou_rle(selected.view(-1,5), gt_boxes, xywha=True,
-                                    is_degree=True, img_size=img_hw, normalized=True)
+                                    is_degree=True, img_size=tuple(img_hw), normalized=True)
                 pred_best_iou, _ = pred_ious.max(dim=1)
                 to_be_ignored = (pred_best_iou > self.ignore_thre)
                 # set mask to zero (ignore) if the pred BB has a large IoU with any gt BB
@@ -295,13 +305,16 @@ class PredLayer(nn.Module):
         elif self.angle_range == 180:
             angle_pred = angle[obj_mask] * np.pi - np.pi/2
         loss_angle = self.loss4angle(angle_pred, target[..., 4][obj_mask])
-        loss_obj = self.loss4obj(conf[penalty_mask], target[...,5][penalty_mask])
+        # loss_obj = self.loss4obj(conf[penalty_mask], target[...,5][penalty_mask])
+        loss_obj = self.loss4obj(conf[penalty_mask], target[...,5][penalty_mask]) # Focal
 
         loss = loss_xy + 0.5*loss_wh + loss_angle + loss_obj
         ngt = valid_gt_num + 1e-16
         self.gt_num = valid_gt_num
-        self.loss_str = f'level_{nH}x{nW} total {int(ngt)} objects: ' \
-                        f'xy/gt {loss_xy/ngt:.3f}, wh/gt {loss_wh/ngt:.3f}' \
-                        f', angle/gt {loss_angle/ngt:.3f}, conf {loss_obj:.3f}'
+        # self.loss_str = f'level_{nH}x{nW} total {int(ngt)} objects: ' \
+        #                 f'xy/gt {loss_xy/ngt:.3f}, wh/gt {loss_wh/ngt:.3f}' \
+        #                 f', angle/gt {loss_angle/ngt:.3f}, conf {loss_obj:.3f}'
 
+        self.loss_str = "{:<10} {:<10} {:<10} {:<10}".format(round(float(loss_xy/ngt), 3), round(float(loss_wh/ngt), 3), round(float(loss_angle/ngt), 3), round(float(loss_obj), 3))
+        
         return None, loss

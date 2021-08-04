@@ -131,9 +131,9 @@ def nms(detections, is_degree=True, nms_thres=0.45, img_size=2048):
     votes = [1]
     for i in range(1, boxes.shape[0]):
         # compute IoU with valid boxes
-        # ious = iou_mask(boxes[i], boxes[valid,:], True, 32, is_degree=is_degree)
-        ious = iou_rle(boxes[i], boxes[valid,:], xywha=True, is_degree=is_degree,
-                      img_size=img_size)
+        ious = iou_mask(boxes[i], boxes[valid,:], True, 32, is_degree=is_degree)
+        # ious = iou_rle(boxes[i], boxes[valid,:], xywha=True, is_degree=is_degree,
+        #               img_size=img_size)
         # the i'th BB is invalid if it is similar to any valid BB
         if (ious >= nms_thres).any():
             continue

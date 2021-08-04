@@ -4,6 +4,9 @@ import scipy.ndimage
 import torch
 import torchvision.transforms.functional as tvf
 import torch.nn.functional as tnf
+import cv2
+from PIL import Image
+from imutils import paths
 
 
 def hflip(image, labels):
@@ -134,11 +137,153 @@ def random_gaussian_filter(img):
     return img.squeeze(1)
 
 
-if __name__ == "__main__":
-    from PIL import Image
-    img_path = 'C:/Projects/MW18Mar/train_no19/Mar10_000291.jpg'
-    img = Image.open(img_path)
-    img.show()
+def get_3rd_point(a, b):
+    direct = a - b
+    return b + np.array([-direct[1], direct[0]], dtype=np.float32)
 
-    new_img = tvf.rotate(img, -45)
-    new_img.show()
+
+def get_dir(src_point, rot_rad):
+    sn, cs = np.sin(rot_rad), np.cos(rot_rad)
+
+    src_result = [0, 0]
+    src_result[0] = src_point[0] * cs - src_point[1] * sn
+    src_result[1] = src_point[0] * sn + src_point[1] * cs
+
+    return src_result
+
+def get_affine_transform(center,
+                        scale,
+                        rot,
+                        output_size,
+                        shift=np.array([0, 0], dtype=np.float32),
+                        inv=0):
+    if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
+        scale = np.array([scale, scale], dtype=np.float32)
+
+    scale_tmp = scale
+    src_w = scale_tmp[0]
+    dst_w = output_size[0]
+    dst_h = output_size[1]
+
+    rot_rad = np.pi * rot / 180
+    src_dir = get_dir([0, src_w * -0.5], rot_rad)
+    dst_dir = np.array([0, dst_w * -0.5], np.float32)
+
+    src = np.zeros((3, 2), dtype=np.float32)
+    dst = np.zeros((3, 2), dtype=np.float32)
+    src[0, :] = center + scale_tmp * shift
+    src[1, :] = center + src_dir + scale_tmp * shift
+    dst[0, :] = [dst_w * 0.5, dst_h * 0.5]
+    dst[1, :] = np.array([dst_w * 0.5, dst_h * 0.5], np.float32) + dst_dir
+
+    src[2:, :] = get_3rd_point(src[0, :], src[1, :])
+    dst[2:, :] = get_3rd_point(dst[0, :], dst[1, :])
+
+    if inv:
+        trans = cv2.getAffineTransform(np.float32(dst), np.float32(src))
+    else:
+        trans = cv2.getAffineTransform(np.float32(src), np.float32(dst))
+
+    return trans
+
+
+def affine_transform(pt, t):
+    new_pt = np.array([pt[0], pt[1], 1.], dtype=np.float32).T
+    new_pt = np.dot(t, new_pt)
+    return new_pt[:2]
+
+
+def _get_border(border, size):
+    i = 1
+    while size - border // i <= border // i:
+            i *= 2
+    return border // i
+
+
+class AffineTransform:
+    def __call__(self, img, labels, input_size, debug=True):
+        output_size = input_size
+
+        img = np.asarray(img)
+        _h, _w = img.shape[:2]
+        c = np.array([_w / 2., _h / 2.], dtype=np.float32)
+        s = max(_w, _h) * 1.0
+        s = s * np.random.choice(np.arange(0.8, 2., 0.1))
+        w_border = _get_border(128, _w)
+        h_border = _get_border(128, _h)
+        c[0] = np.random.randint(low=w_border, high=_w - w_border)
+        c[1] = np.random.randint(low=h_border, high=_h - h_border)
+        r = 0 # np.random.randint(-180, 180) # TODO: affine with random rotate
+    
+        trans_input = get_affine_transform(
+                        c, s, r, [input_size, input_size])
+        img_tran = cv2.warpAffine(img, trans_input, 
+                        (input_size, input_size),
+                        flags=cv2.INTER_LINEAR)
+        trans_output = get_affine_transform(c, s, r, [output_size, output_size])
+
+        targets = torch.zeros(labels.shape[0], 5)
+
+        for i, label in enumerate(labels):
+            cx, cy, w, h, a = label
+            x1, y1 = (cx - w//2, cy - h//2)
+            x2, y2 = (cx + w//2, cy + h//2)
+            x1y1 = affine_transform((x1, y1), trans_output)
+            x2y2 = affine_transform((x2, y2), trans_output)
+            x1_tran, y1_tran = x1y1[0], x1y1[1]
+            x2_tran, y2_tran = x2y2[0], x2y2[1]
+
+            w_tran, h_tran = x2_tran - x1_tran, y2_tran - y1_tran
+            cx_tran = (x1_tran + x2_tran) // 2
+            cy_tran = (y1_tran + y2_tran) // 2
+
+            targets[i,:] = torch.tensor([cx_tran, cy_tran, w_tran, h_tran, a])
+
+            if debug:
+                # print(w_tran, h_tran)
+                a_tran = a*np.pi/180
+                C, S = np.cos(a_tran), np.sin(a_tran)
+                R = np.asarray([[-C, -S], [S, -C]])
+                pts = np.asarray([[-w_tran / 2, -h_tran / 2], [w_tran / 2, -h_tran / 2], 
+                                    [w_tran / 2, h_tran / 2], [-w_tran / 2, h_tran / 2]])
+                points = np.asarray([((cx_tran, cy_tran) + pt @ R).astype(int) for pt in pts])
+
+                cv2.circle(img_tran, (int(cx_tran), int(cy_tran)), 2, (0, 255, 0), 5)
+                cv2.polylines(img_tran, [points], True, (255, 0, 0), 2)
+
+                # cv2.imwrite("img.jpg", img_tran)
+
+        img_tran = Image.fromarray(img_tran)
+
+        return img_tran, targets
+
+
+if __name__ == "__main__":
+
+    data_path = '/mnt/sdb1/Data/Fisheye'
+    img_path = random.choice(list(paths.list_images(data_path)))
+    print(img_path)
+
+    label_path = img_path.replace("jpg", "txt")
+    # img = cv2.imread(img_path)
+    img = Image.open(img_path)
+    
+    # img.show("ori")
+
+    affine_trans = AffineTransform()
+
+    labels = []
+
+    with open(label_path) as f:
+        li = 0
+        for i, line in enumerate(f):
+            bbox = torch.tensor(list(map(float, line.rstrip("\n").split(" ")[1:])))
+            labels.append(bbox)
+
+    labels = torch.stack(labels)
+    
+    img_tran, labels_tran = affine_trans(img, labels)
+
+    # img_tran.show("tran")
+    cv2.imshow("f", img_tran)
+    cv2.waitKey(0)
