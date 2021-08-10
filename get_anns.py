@@ -23,9 +23,9 @@ if torch.cuda.is_available():
     device = "cuda"
 
 image_dir = "datasets"
-file_name = "lyquocsu_quay"
+file_name = "75-279_LinhDam_HN-1"
 ds = DeepSort("weights/osnet_x1_0.onnx")
-vs = cv2.VideoCapture(f"video/phama/{file_name}.mp4")
+vs = cv2.VideoCapture(f"/mnt/sdb1/Data/record/{file_name}.mkv")
 input_size = 608
 conf_thres = 0.3
 nms_thres = 0.45
@@ -42,8 +42,8 @@ ann_json = {
         "id": 1,
         "name": "person",
         "supercategory": "person"
-    }
-    ]}
+    }]
+}
 
 while True:
     image = vs.read()[1]
