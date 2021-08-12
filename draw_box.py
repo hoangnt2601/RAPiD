@@ -36,29 +36,29 @@ def draw_polygon(event, x, y, flags, param):
 			cv2.polylines(img_c, [pts], 
 					  True, (0, 255, 0), 5)
 
-			# x1 = int(coords[0][0] * scaleX)
-			# y1 = int(coords[0][1] * scaleY)
+			x1 = int(coords[0][0] * scaleX)
+			y1 = int(coords[0][1] * scaleY)
 
-			# x2 = int(coords[1][0] * scaleX)
-			# y2 = int(coords[1][1] * scaleY)
+			x2 = int(coords[1][0] * scaleX)
+			y2 = int(coords[1][1] * scaleY)
 
-			# x3 = int(coords[2][0] * scaleX)
-			# y3 = int(coords[2][1] * scaleY)
+			x3 = int(coords[2][0] * scaleX)
+			y3 = int(coords[2][1] * scaleY)
 			
-			# x4 = int(coords[3][0] * scaleX)
-			# y4 = int(coords[3][1] * scaleY)
+			x4 = int(coords[3][0] * scaleX)
+			y4 = int(coords[3][1] * scaleY)
 
-			x1 = int(coords[0][0])
-			y1 = int(coords[0][1])
+			# x1 = int(coords[0][0])
+			# y1 = int(coords[0][1])
 
-			x2 = int(coords[1][0])
-			y2 = int(coords[1][1])
+			# x2 = int(coords[1][0])
+			# y2 = int(coords[1][1])
 
-			x3 = int(coords[2][0])
-			y3 = int(coords[2][1])
+			# x3 = int(coords[2][0])
+			# y3 = int(coords[2][1])
 			
-			x4 = int(coords[3][0])
-			y4 = int(coords[3][1])
+			# x4 = int(coords[3][0])
+			# y4 = int(coords[3][1])
 
 
 			person_vector = np.asarray([x4 - x1, y4 - y1])
@@ -80,15 +80,15 @@ def draw_polygon(event, x, y, flags, param):
 
 			# cv2.rectangle(img_c, (cx-W//2, cy-H//2), (cx+W//2, cy+H//2), color=(0,0,0), thickness=5)
 
-			radian = angle*np.pi/180
-			C, S = np.cos(radian), np.sin(radian)
-			R = np.asarray([[-C, -S], [S, -C]])
-			pts = np.asarray([[-W / 2, -W / 2], [W / 2, -W / 2], 
-								[W / 2, W / 2], [-W / 2, W / 2]])
-			p = np.asarray([((cx, cy) + pt @ R).astype(int) for pt in pts])
+			# radian = angle*np.pi/180
+			# C, S = np.cos(radian), np.sin(radian)
+			# R = np.asarray([[-C, -S], [S, -C]])
+			# pts = np.asarray([[-W / 2, -W / 2], [W / 2, -W / 2], 
+			# 					[W / 2, W / 2], [-W / 2, W / 2]])
+			# p = np.asarray([((cx, cy) + pt @ R).astype(int) for pt in pts])
 
-			cv2.circle(img_c, (cx, cy), 2, (0, 255, 0), 10)
-			cv2.polylines(img_c, [p], True, (255, 0, 0), 5)
+			# cv2.circle(img_c, (cx, cy), 2, (0, 255, 0), 10)
+			# cv2.polylines(img_c, [p], True, (255, 0, 0), 5)
 
 			draw_box.append([cx, cy, W, H, angle])
 
@@ -107,10 +107,10 @@ def draw_polygon(event, x, y, flags, param):
 
 
 data_dir = "/mnt/sdb1/Data/Phamacity"
-filename = "timecity1_clean"
+filename = "linhdam2_clean"
 image_dir = os.path.join(data_dir, filename)
-ann_file = os.path.join(data_dir, "annotations", f"{filename}_new2.json")
-ann_file_new = os.path.join(data_dir, "annotations", f"{filename}_new3.json")
+ann_file = os.path.join(data_dir, "annotations", f"{filename}.json")
+ann_file_new = os.path.join(data_dir, "annotations", f"{filename}_new.json")
 
 imgid2path = dict()
 imgid2anns = defaultdict(list)
@@ -128,7 +128,7 @@ with open(ann_file) as f:
 	for image_id in imgid2anns.keys():
 		anns = imgid2anns[image_id]
 		img = cv2.imread(imgid2path[image_id])
-		
+		if img is None: continue
 		shape = img.shape[:2]
 		scaleX = shape[0] / resize[0]
 		scaleY = shape[0] / resize[1]
@@ -139,25 +139,27 @@ with open(ann_file) as f:
 			bbox = list(map(int, ann["bbox"]))
 			person_id = int(ann["person_id"])
 
-			# x,y,w,h,a = bbox
-			# radian = a*np.pi/180
-			# C, S = np.cos(radian), np.sin(radian)
-			# R = np.asarray([[-C, -S], [S, -C]])
-			# pts = np.asarray([[-w / 2, -h / 2], [w / 2, -h / 2], 
-			# 					[w / 2, h / 2], [-w / 2, h / 2]])
-			# points = np.asarray([((x, y) + pt @ R).astype(int) for pt in pts])
+			x,y,w,h,a = bbox
+			radian = a*np.pi/180
+			C, S = np.cos(radian), np.sin(radian)
+			R = np.asarray([[-C, -S], [S, -C]])
+			pts = np.asarray([[-w / 2, -h / 2], [w / 2, -h / 2], 
+								[w / 2, h / 2], [-w / 2, h / 2]])
+			points = np.asarray([((x, y) + pt @ R).astype(int) for pt in pts])
 
-			# cv2.circle(img, (int(x), int(y)), 2, (0, 255, 0), 10)
-			# cv2.polylines(img, [points], True, (0, 0, 255), 5)
-			# cv2.putText(img, str(person_id), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2,
-			# 							(0,255,0), 4, cv2.LINE_AA)
+			cv2.circle(img, (int(x), int(y)), 2, (0, 255, 0), 10)
+			cv2.polylines(img, [points], True, (0, 0, 255), 5)
+			cv2.putText(img, str(person_id), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2,
+										(0,255,0), 4, cv2.LINE_AA)
 
 		cv2.imshow("image", imutils.resize(img, width=1024))
 		cv2.setMouseCallback('image', draw_polygon)
 		key = cv2.waitKey(0) & 0xff
 		if key == ord('q'):
-			json.dump(data_json, f, indent=4)
 			break
+		if key == ord('c'):
+			os.remove(imgid2path[image_id])
+			continue
 		
 		if draw_box:
 			with open(ann_file_new, 'w') as f:
@@ -177,17 +179,17 @@ with open(ann_file) as f:
 
 					data_json["annotations"].append(ann)
 
-					# radian = a*np.pi/180
-					# C, S = np.cos(radian), np.sin(radian)
-					# R = np.asarray([[-C, -S], [S, -C]])
-					# pts = np.asarray([[-w / 2, -h / 2], [w / 2, -h / 2], 
-					# 					[w / 2, h / 2], [-w / 2, h / 2]])
-					# points = np.asarray([((x, y) + pt @ R).astype(int) for pt in pts])
+					radian = a*np.pi/180
+					C, S = np.cos(radian), np.sin(radian)
+					R = np.asarray([[-C, -S], [S, -C]])
+					pts = np.asarray([[-w / 2, -h / 2], [w / 2, -h / 2], 
+										[w / 2, h / 2], [-w / 2, h / 2]])
+					points = np.asarray([((x, y) + pt @ R).astype(int) for pt in pts])
 
-					# # cv2.circle(img, (int(x), int(y)), 2, (0, 255, 0), 10)
-					# cv2.polylines(img, [points], True, (0, 0, 255), 5)
-					# cv2.putText(img, str(person_id), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2,
-					# 							(0,255,0), 4, cv2.LINE_AA)
+					# cv2.circle(img, (int(x), int(y)), 2, (0, 255, 0), 10)
+					cv2.polylines(img, [points], True, (0, 0, 255), 5)
+					cv2.putText(img, str(person_id), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 2,
+												(0,255,0), 4, cv2.LINE_AA)
 				
 				json.dump(data_json, f, indent=4)
 

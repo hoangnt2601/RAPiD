@@ -4,14 +4,14 @@ import numpy as np
 import json
 
 import imutils
-import shutil
 from collections import defaultdict
 
 
 data_dir = "/mnt/sdb1/Data/Phamacity"
-filename = "lyquocsu_clean"
+filename = "timecity2_final"
 image_dir = os.path.join(data_dir, filename)
-ann_file = os.path.join(data_dir, "annotations", f"{filename}_new.json")
+ann_file = os.path.join(data_dir, "annotations", f"{filename}.json")
+print(ann_file)
 
 imgid2path = dict()
 imgid2anns = defaultdict(list)
@@ -27,9 +27,12 @@ with open(ann_file) as f:
 	for image_id in imgid2anns.keys():
 		anns = imgid2anns[image_id]
 		img = cv2.imread(imgid2path[image_id])
-		
-		img_c = imutils.resize(img, width=1024)
+		if img is None:
+			print(f"Error {image_id}")
+			continue
 
+		print(image_id)
+		
 		for ann in anns:
 			bbox = list(map(int, ann["bbox"]))
 			person_id = int(ann["person_id"])
@@ -48,7 +51,7 @@ with open(ann_file) as f:
 										(0,255,0), 4, cv2.LINE_AA)
 
 		cv2.imshow("image", imutils.resize(img, width=1024))
-		key = cv2.waitKey(0) & 0xff
+		key = cv2.waitKey(1) & 0xff
 		if key == ord('q'):
 			break
 
