@@ -7,10 +7,10 @@ import imutils
 from collections import defaultdict
 
 
-data_dir = "/mnt/sdb1/Data/Phamacity"
-filename = "timecity2_final"
+data_dir = "/mnt/sdb1/Data/Phamacity_datasets/train"
+filename = "linhdam2_final"
 image_dir = os.path.join(data_dir, filename)
-ann_file = os.path.join(data_dir, "annotations", f"{filename}.json")
+ann_file = os.path.join(data_dir, f"{filename}.json")
 print(ann_file)
 
 imgid2path = dict()

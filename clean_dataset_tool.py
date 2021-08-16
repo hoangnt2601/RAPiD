@@ -6,14 +6,14 @@ import imutils
 import shutil
 
 
-data_dir = "/mnt/sdb1/Data/Phamacity"
-filename = "linhdam1"
+data_dir = "/mnt/sdb1/Data/Phamacity_datasets/train"
+filename = "linhdam1_final"
 image_dir = os.path.join(data_dir, filename)
 clean_image_dir = os.path.join(data_dir, filename+"_clean")
 if not os.path.exists(clean_image_dir):
     os.mkdir(clean_image_dir)
-ann_file = os.path.join(data_dir, "annotations", f"{filename}.json")
-ann_file_clean = os.path.join(data_dir, "annotations", f"{filename}_clean.json")
+ann_file = os.path.join(data_dir, f"{filename}.json")
+ann_file_clean = os.path.join(data_dir, f"{filename}_clean.json")
 print(ann_file)
 
 ann_json = {
@@ -44,7 +44,6 @@ with open(ann_file) as f:
         img = cv2.imread(img_path)
         if img is not None:
             x,y,w,h,a = bbox
-            if w < 60: continue
             radian = a*np.pi/180
             C, S = np.cos(radian), np.sin(radian)
             R = np.asarray([[-C, -S], [S, -C]])
